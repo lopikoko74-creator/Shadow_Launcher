@@ -3,14 +3,33 @@
   "version": "0.2.0",
   "description": "Shadow Launcher — Minecraft launcher shell",
   "main": "src/main.cjs",
-  "scripts": { "start": "electron .", "dist": "electron-builder --win nsis zip" },
-  "devDependencies": { "electron": "^35.0.0", "electron-builder": "^26.0.12" },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis zip"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
   "build": {
     "appId": "com.shadowlauncher.app",
     "productName": "Shadow Launcher",
-    "directories": { "output": "release" },
-    "files": ["src/**/*", "package.json"],
-    "win": { "target": ["nsis", "zip"], "icon": "assets/icon.ico" },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
