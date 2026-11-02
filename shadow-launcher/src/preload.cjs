@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('shadow', {
   info: () => ipcRenderer.invoke('app:info'),
+  windowControl: action => ipcRenderer.invoke('window:control', action),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: v => ipcRenderer.invoke('settings:save', v),
   listVersions: () => ipcRenderer.invoke('versions:list'),
