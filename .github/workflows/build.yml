@@ -21,6 +21,6 @@ jobs:
         run: npm run dist
       - uses: actions/upload-artifact@v4
         with:
-          name: Shadow-Launcher-0.2.0-Windows
+          name: Shadow-Launcher-0.2.1-Windows
           path: shadow-launcher/release/*
           if-no-files-found: error
