@@ -1,7 +1,7 @@
 {
   "name": "shadow-launcher",
-  "version": "0.2.0",
-  "description": "Shadow Launcher — Minecraft launcher shell",
+  "version": "0.2.1",
+  "description": "Shadow Launcher — Minecraft launcher",
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",
