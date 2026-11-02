@@ -1,0 +1,28 @@
+name: Build Shadow Launcher
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'shadow-launcher/**'
+      - '.github/workflows/build.yml'
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: shadow-launcher/package-lock.json
+      - name: Install dependencies
+        working-directory: shadow-launcher
+        run: npm install
+      - name: Build Windows installer and portable zip
+        working-directory: shadow-launcher
+        run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Shadow-Launcher-0.2.0-Windows
+          path: shadow-launcher/release/*
+          if-no-files-found: error
