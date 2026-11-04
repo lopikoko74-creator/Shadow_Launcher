@@ -12,5 +12,7 @@ contextBridge.exposeInMainWorld('shadow', {
   installGame: id => ipcRenderer.invoke('game:install', id),
   installedGames: () => ipcRenderer.invoke('game:installed'),
   playGame: id => ipcRenderer.invoke('game:play', id),
+  loginMicrosoft: () => ipcRenderer.invoke('auth:microsoft'),
+  onAuthDeviceCode: callback => { ipcRenderer.on('auth:device-code', (_, data) => callback(data)); },
   onGameProgress: callback => { ipcRenderer.on('game:progress', (_, data) => callback(data)); }
 });
