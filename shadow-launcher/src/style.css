@@ -7,3 +7,19 @@
 .window-controls button:hover{background:#332653}
 .window-controls button:last-child:hover{background:#a83255;border-color:#a83255;color:white}
 @media(max-width:1050px){.window-controls button{width:27px}}
+
+/* Dark native scrollbars */
+*{scrollbar-width:thin;scrollbar-color:#49386f #080910}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:#080910}
+::-webkit-scrollbar-thumb{background:#49386f;border:2px solid #080910;border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:#8064d9}
+.version-item{gap:12px}
+.version-item .choose-version{padding:8px 12px;white-space:nowrap}
+.install-panel{margin:16px 0;padding:18px;background:#11111f;border:1px solid #44345f;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.install-panel small{display:block;color:#85809b;font-size:9px;letter-spacing:1.5px}
+.install-panel strong{display:block;color:#d3c5ff;font-size:20px;margin-top:6px}
+.install-actions{display:flex;gap:8px}
+.install-panel progress{grid-column:1/-1;width:100%;height:8px;accent-color:#9876ff}
+.install-panel p{grid-column:1/-1;margin:0}
+@media(max-width:850px){.install-panel{grid-template-columns:1fr}.install-actions{flex-wrap:wrap}}
