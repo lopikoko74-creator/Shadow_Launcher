@@ -1,6 +1,6 @@
 {
   "name": "shadow-launcher",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Shadow Launcher — Minecraft launcher",
   "main": "src/main.cjs",
   "scripts": {
