@@ -1,6 +1,6 @@
 {
   "name": "shadow-launcher",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Shadow Launcher — Minecraft launcher",
   "main": "src/main.cjs",
   "scripts": {
@@ -31,5 +31,11 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }
+  },
+  "dependencies": {
+    "@xmcl/core": "^2.16.2",
+    "@xmcl/installer": "^6.3.7",
+    "@xmcl/user": "^4.4.2",
+    "@azure/msal-node": "^3.8.3"
   }
 }
