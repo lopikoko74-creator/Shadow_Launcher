@@ -4,6 +4,11 @@ let allVersions = [];
 let settings = {};
 let selectedVersion = '';
 let installedVersions = [];
+window.shadow.onAuthDeviceCode((data) => {
+  if ($('auth-status')) $('auth-status').textContent = data.message || ('Код входа: ' + data.userCode);
+  if (data.verificationUri) window.shadow.open(data.verificationUri);
+});
+
 window.shadow.onGameProgress((data) => {
   if ($('install-progress')) $('install-progress').value = data.percent || 0;
   if ($('install-status')) $('install-status').textContent = data.status || '';
@@ -115,7 +120,7 @@ $('install-selected')?.addEventListener('click', async () => {
 });
 $('play-selected')?.addEventListener('click', async () => {
   if (!selectedVersion) return toast('Сначала выбери версию');
-  try { const result = await window.shadow.playGame(selectedVersion); toast(result.reason); }
+  try { const result = await window.shadow.playGame(selectedVersion); toast(result.ok ? 'Запуск Minecraft ' + result.version : 'Не удалось запустить игру'); }
   catch (error) { showError('Не удалось запустить игру', error); }
 });
 
@@ -197,6 +202,23 @@ async function checkJava(showMessage = true) {
   }
 }
 
+
+$('login-microsoft')?.addEventListener('click', async () => {
+  const button = $('login-microsoft');
+  button.disabled = true;
+  if ($('auth-status')) $('auth-status').textContent = 'Ожидание входа Microsoft…';
+  try {
+    const result = await window.shadow.loginMicrosoft();
+    if ($('auth-status')) $('auth-status').textContent = 'Вход выполнен: ' + result.name;
+    toast('Microsoft аккаунт подключён: ' + result.name);
+  } catch (error) {
+    if ($('auth-status')) $('auth-status').textContent = error.message || String(error);
+    showError('Ошибка входа Microsoft', error);
+  } finally {
+    button.disabled = false;
+  }
+});
+
 $('check-java')?.addEventListener('click', () => checkJava(true));
 
 $('memory')?.addEventListener('input', () => {
@@ -208,6 +230,7 @@ $('save-settings')?.addEventListener('click', async () => {
   button.disabled = true;
   try {
     settings = await window.shadow.saveSettings({
+      microsoftClientId: $('microsoft-client-id')?.value || '',
       javaPath: $('java-path')?.value || '',
       memory: $('memory')?.value || 4096,
       gameDir: $('game-dir')?.value || ''
@@ -227,6 +250,7 @@ async function initialize() {
     const info = await window.shadow.info();
     if ($('app-version')) $('app-version').textContent = info.version;
     settings = await window.shadow.getSettings();
+    if ($('microsoft-client-id')) $('microsoft-client-id').value = settings.microsoftClientId || '';
     if ($('java-path')) $('java-path').value = settings.javaPath || '';
     if ($('memory')) $('memory').value = settings.memory || 4096;
     if ($('memory-value')) $('memory-value').textContent = ($('memory')?.value || 4096) + ' МБ';
