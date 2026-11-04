@@ -2,6 +2,12 @@ const $ = (id) => document.getElementById(id);
 
 let allVersions = [];
 let settings = {};
+let selectedVersion = '';
+let installedVersions = [];
+window.shadow.onGameProgress((data) => {
+  if ($('install-progress')) $('install-progress').value = data.percent || 0;
+  if ($('install-status')) $('install-status').textContent = data.status || '';
+});
 
 function toast(message) {
   const element = $('toast');
@@ -55,6 +61,7 @@ async function loadVersions() {
   try {
     const data = await window.shadow.listVersions();
     allVersions = Array.isArray(data.versions) ? data.versions : [];
+    installedVersions = await window.shadow.installedGames();
     if ($('latest-version')) $('latest-version').textContent = data.latest && data.latest.release ? data.latest.release : 'Неизвестно';
     renderVersions();
     toast('Каталог версий загружен');
@@ -83,9 +90,34 @@ function renderVersions() {
   list.innerHTML = rows.map((version) => {
     const date = version.releaseTime ? new Date(version.releaseTime).toLocaleDateString('ru-RU') : '';
     const label = version.type === 'release' ? 'РЕЛИЗ' : 'SNAPSHOT';
-    return '<div class="version-item"><div><strong>' + escapeHtml(version.id) + '</strong><small>' + escapeHtml(date) + '</small></div><span class="tag">' + label + '</span></div>';
+    return '<div class="version-item"><div><strong>' + escapeHtml(version.id) + '</strong><small>' + escapeHtml(date) + '</small></div><span class="tag">' + label + '</span><button class="secondary choose-version" data-version="' + escapeHtml(version.id) + '">' + (installedVersions.includes(version.id) ? 'УСТАНОВЛЕНА' : 'ВЫБРАТЬ') + '</button></div>';
   }).join('');
+  list.querySelectorAll('.choose-version').forEach(button => button.addEventListener('click', () => {
+    selectedVersion = button.dataset.version;
+    if ($('selected-version')) $('selected-version').textContent = selectedVersion;
+    renderVersions();
+  }));
 }
+
+$('install-selected')?.addEventListener('click', async () => {
+  if (!selectedVersion) return toast('Сначала выбери версию');
+  const button = $('install-selected'); button.disabled = true;
+  if ($('install-status')) $('install-status').textContent = 'Подготовка загрузки…';
+  try {
+    const result = await window.shadow.installGame(selectedVersion);
+    installedVersions = await window.shadow.installedGames(); renderVersions();
+    toast('Minecraft ' + result.version + ' установлен');
+    if ($('install-status')) $('install-status').textContent = 'Установка завершена';
+  } catch (error) {
+    showError('Ошибка установки', error);
+    if ($('install-status')) $('install-status').textContent = error.message || String(error);
+  } finally { button.disabled = false; }
+});
+$('play-selected')?.addEventListener('click', async () => {
+  if (!selectedVersion) return toast('Сначала выбери версию');
+  try { const result = await window.shadow.playGame(selectedVersion); toast(result.reason); }
+  catch (error) { showError('Не удалось запустить игру', error); }
+});
 
 $('refresh-versions')?.addEventListener('click', loadVersions);
 $('version-search')?.addEventListener('input', renderVersions);
