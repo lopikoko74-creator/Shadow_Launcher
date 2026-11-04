@@ -3,9 +3,13 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const https = require('node:https');
+const { launch: launchMinecraft } = require('@xmcl/core');
+const { MicrosoftAuthenticator } = require('@xmcl/user');
+const { PublicClientApplication } = require('@azure/msal-node');
 
 const MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
 let win;
+let minecraftAccount = null;
 const dataDir = () => path.join(app.getPath('userData'), 'shadow-launcher');
 const settingsFile = () => path.join(dataDir(), 'settings.json');
 function readSettings() {
@@ -113,7 +117,7 @@ ipcMain.handle('window:control', (_, action) => {
 ipcMain.handle('settings:get', () => readSettings());
 ipcMain.handle('settings:save', (_, value) => {
   const old = readSettings();
-  const safe = { ...old, javaPath: String(value.javaPath || '').slice(0, 1000), memory: Math.max(1024, Math.min(16384, Number(value.memory) || 4096)), gameDir: String(value.gameDir || old.gameDir).slice(0, 1000) };
+  const safe = { ...old, microsoftClientId: String(value.microsoftClientId || old.microsoftClientId || '').trim().slice(0, 100), javaPath: String(value.javaPath || '').slice(0, 1000), memory: Math.max(1024, Math.min(16384, Number(value.memory) || 4096)), gameDir: String(value.gameDir || old.gameDir).slice(0, 1000) };
   writeSettings(safe); return safe;
 });
 ipcMain.handle('versions:list', async () => {
@@ -211,11 +215,75 @@ ipcMain.handle('game:installed', () => {
   const root = path.resolve(readSettings().gameDir || path.join(app.getPath('userData'), 'game'));
   try { return JSON.parse(fs.readFileSync(path.join(root, 'installed-versions.json'), 'utf8')); } catch { return []; }
 });
+ipcMain.handle('auth:microsoft', async () => {
+  const clientId = String(readSettings().microsoftClientId || '').trim();
+  if (!clientId) throw new Error('Сначала укажи Microsoft Client ID в настройках лаунчера.');
+  const pca = new PublicClientApplication({
+    auth: { clientId, authority: 'https://login.microsoftonline.com/consumers' }
+  });
+  const tokenResult = await pca.acquireTokenByDeviceCode({
+    scopes: ['XboxLive.signin', 'offline_access'],
+    deviceCodeCallback: (response) => {
+      if (win && !win.isDestroyed()) win.webContents.send('auth:device-code', {
+        message: response.message,
+        userCode: response.userCode,
+        verificationUri: response.verificationUri
+      });
+    }
+  });
+  if (!tokenResult?.accessToken) throw new Error('Microsoft не вернула токен доступа.');
+  const authenticator = new MicrosoftAuthenticator({});
+  const { minecraftXstsResponse } = await authenticator.acquireXBoxToken(tokenResult.accessToken);
+  const xui = minecraftXstsResponse.DisplayClaims?.xui?.[0];
+  if (!xui?.uhs || !minecraftXstsResponse.Token) throw new Error('Не удалось получить Xbox XSTS токен.');
+  const mc = await authenticator.loginMinecraftWithXBox(xui.uhs, minecraftXstsResponse.Token);
+  const entitlementResponse = await fetch('https://api.minecraftservices.com/entitlements/mcstore', {
+    headers: { Authorization: 'Bearer ' + mc.access_token }
+  });
+  if (!entitlementResponse.ok) throw new Error('Не удалось проверить лицензию Minecraft: HTTP ' + entitlementResponse.status);
+  const entitlements = await entitlementResponse.json();
+  if (!Array.isArray(entitlements.items) || entitlements.items.length === 0) {
+    throw new Error('На этом Microsoft-аккаунте не найдена лицензия Minecraft Java Edition.');
+  }
+  const profileResponse = await fetch('https://api.minecraftservices.com/minecraft/profile', {
+    headers: { Authorization: 'Bearer ' + mc.access_token }
+  });
+  if (!profileResponse.ok) throw new Error('У аккаунта нет доступного профиля Minecraft Java Edition.');
+  const profile = await profileResponse.json();
+  minecraftAccount = {
+    accessToken: mc.access_token,
+    id: profile.id,
+    name: profile.name,
+    expiresAt: Date.now() + (mc.expires_in * 1000)
+  };
+  return { ok: true, name: profile.name, id: profile.id };
+});
 ipcMain.handle('game:play', async (_, versionId) => {
   const root = path.resolve(readSettings().gameDir || path.join(app.getPath('userData'), 'game'));
-  const installed = await ipcMain.handlers?.['game:installed'];
   let list = [];
   try { list = JSON.parse(fs.readFileSync(path.join(root, 'installed-versions.json'), 'utf8')); } catch {}
-  if (!list.includes(versionId)) throw new Error('Сначала установи эту версию Minecraft');
-  return { ok: false, reason: 'Для запуска нужна официальная авторизация Microsoft и проверка владения Minecraft Java Edition. Она ещё не подключена; обход авторизации не используется.' };
+  if (!list.includes(versionId)) throw new Error('Сначала установи эту версию Minecraft.');
+  if (!minecraftAccount || minecraftAccount.expiresAt <= Date.now()) {
+    minecraftAccount = null;
+    throw new Error('Сначала войди через Microsoft в настройках лаунчера.');
+  }
+  const java = await checkJava(readSettings().javaPath);
+  if (!java.ok) throw new Error(java.message);
+  const cfg = readSettings();
+  const child = await launchMinecraft({
+    gamePath: root,
+    resourcePath: root,
+    javaPath: java.path,
+    version: versionId,
+    gameProfile: { id: minecraftAccount.id, name: minecraftAccount.name },
+    accessToken: minecraftAccount.accessToken,
+    userType: 'msa',
+    launcherName: 'Shadow Launcher',
+    launcherBrand: app.getVersion(),
+    minMemory: 1024,
+    maxMemory: Math.max(1024, Number(cfg.memory) || 4096),
+    extraExecOption: { detached: true, stdio: 'ignore', windowsHide: false }
+  });
+  child.unref();
+  return { ok: true, name: minecraftAccount.name, version: versionId };
 });
