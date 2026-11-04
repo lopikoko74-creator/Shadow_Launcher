@@ -8,5 +8,9 @@ contextBridge.exposeInMainWorld('shadow', {
   checkJava: p => ipcRenderer.invoke('java:check', p),
   addProfile: n => ipcRenderer.invoke('profiles:add', n),
   removeProfile: id => ipcRenderer.invoke('profiles:remove', id),
-  open: url => ipcRenderer.invoke('shell:open', url)
+  open: url => ipcRenderer.invoke('shell:open', url),
+  installGame: id => ipcRenderer.invoke('game:install', id),
+  installedGames: () => ipcRenderer.invoke('game:installed'),
+  playGame: id => ipcRenderer.invoke('game:play', id),
+  onGameProgress: callback => { ipcRenderer.on('game:progress', (_, data) => callback(data)); }
 });
