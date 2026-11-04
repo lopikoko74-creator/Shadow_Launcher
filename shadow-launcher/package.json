@@ -33,7 +33,7 @@
     }
   },
   "dependencies": {
-    "@xmcl/core": "2.16.2",
+    "@xmcl/core": "2.15.1",
     "@xmcl/user": "4.4.2",
     "@azure/msal-node": "3.8.3"
   }
